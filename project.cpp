@@ -71,6 +71,43 @@ void swap(int *x,int *y){
 	*x=*y;
 	*y=tmp;
 }
+
+void zero_padding(int m,int n){
+	/*int num=5,index=0,bindex=0;
+	int tmp;
+	int a[10]={1,2,3,4,5};
+	int b[10];
+	//matSrc.cols=num;
+	for(int i=0;i<10;i++){
+		if(!num%2)
+			tmp=bindex/2-1;
+		else
+			tmp=(bindex-1)/2;	
+		if(index>tmp){
+			num++;
+			b[i]=0;
+			bindex++;
+		}
+		else{
+			b[i]=a[index++];
+			bindex++;
+		}
+	}
+	cout<<"num "<<num;
+	for(int i=0;i<num;i++)
+		cout<<"\t "<<b[i];*/
+	int a[5]={1,2,3,4,5};
+	int *b=(int *)malloc(10*sizeof(int));
+	for(int i =0;i<m;i++){
+		if(i<n)
+			b[i]=a[i];
+		else
+			b[i]=0;
+	}
+	
+	for(int i =0;i<m;i++)
+		cout<<b[i]<<" \t";
+}
 void bit_reverse(/*int *x,int *y*/){
 	int nn,i,i1,j,k,i2;
 	double tx,ty;
@@ -109,7 +146,9 @@ int main(){
 				}*/
 //	fourier_trans();
 //	fast_fourier();
-	bit_reverse();
+//	bit_reverse();
+	zero_padding(10,5);
+
 	//imshow("Fourier result",matDst[0]);
 //	waitKey(0);
 
