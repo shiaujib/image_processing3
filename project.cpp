@@ -14,6 +14,11 @@ Mat matSrc,matDst,matZero;
 void init(String str){
 	matSrc=imread(str,0);
 	matDst=Mat(matSrc.size(),CV_64FC2);
+	for(int i=0;i<matSrc.cols;i++)
+		for(int j=0;j<matSrc.rows;j++){
+			matDst.at<Vec2d>(j,i)[0]=matSrc.at<uchar>(j,i);
+			cout<<matDst.at<Vec2d>(j,i)[1]<<"\t";
+		}
 	/*for(int i=0;i<matSrc.cols;i++)
 		for(int j=0;j<matSrc.rows;j++){
 			matDst.at<Vec2d>(j,i)[0]=matSrc.at<uchar>(j,i);
@@ -57,6 +62,61 @@ void fourier_trans(){
 	imshow("Fourier result",channels[1]);
 	waitKey(0);
 }
+void fft_2d(Mat matin,bool dir){
+	int cols,rows;
+	cols=matin.cols;
+	rows=matin.rows;
+	double realPart[100000],imagePart[100000];
+	
+	for(int i=0;i<rows;i++){
+		for(int j=0;j<cols;j++){
+			realPart[j]=matin.at<Vec2d>(i,j)[0];
+			imagePart[j]=matin.at<Vec2b>(i,j)[1];
+		}
+				
+	
+
+void fft(int dir,int bits,int nn,double *x,double *y){
+	int l1,l2=1,i1;
+	double u1=1,u2=0,cof1=-1,cof2=0,t1,t2,value;
+	for(int i=0;i<bits;i++){
+		l1=l2;
+		l2/=2;
+		for(int i=0;i<l1;i++){
+			for(int j=i;j<nn;j+=12){
+				i1=j+l1;
+				t1=u1*x[i1]-u2*y[i1];
+				t2=u1*y[i1]+u2*x[i1];
+				x[i1]=x[j]-t1;
+				y[i1]=y[j]-t2;
+				x[j]+=t1;
+				y[j]+=t2;
+			}
+			value=u1*cof1-u2*cof2;
+			u2=u1*cof2+u2*cof1;
+			u1=value;
+		}
+		cof2=sqrt((1-cof1)/2);
+		if(dir==1)
+			cof2*=-1;
+		cof1=sqrt((1+cof1)/2);
+
+
+	}
+	if(dir==1){
+		for(int i=0;i<nn;i++){
+			x[i]/=nn;
+			y[i]/=nn;
+		}
+	}
+}
+	
+
+
+
+		
+		
+		
 
 void fast_fourier(){
 	int j=8;
@@ -147,7 +207,7 @@ int main(){
 //	fourier_trans();
 //	fast_fourier();
 //	bit_reverse();
-	zero_padding(10,5);
+//	zero_padding(10,5);
 
 	//imshow("Fourier result",matDst[0]);
 //	waitKey(0);
