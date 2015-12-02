@@ -10,15 +10,16 @@ using namespace std;
 using namespace cv;
 
 
-Mat matSrc,matDst,matZero,matResult;
+Mat matSrc,matDst,matZero,matResult,matFFT;
 void init(String str){
 	matSrc=imread(str,0);
 	matDst=Mat(matSrc.size(),CV_64FC2);
 	matResult=Mat(matSrc.size(),CV_64FC2);
+	matFFT=Mat(matSrc.size(),CV_64FC1);
 	for(int i=0;i<matSrc.cols;i++)
 		for(int j=0;j<matSrc.rows;j++){
 			matDst.at<Vec2d>(j,i)[0]=matSrc.at<uchar>(j,i);
-	//		cout<<matDst.at<Vec2d>(j,i)[1]<<"\t";
+//			cout<<matDst.at<Vec2d>(j,i)[0]<<"----\t";
 		}
 	cout<<matSrc.cols<<endl;
 	cout<<matSrc.rows<<endl;
@@ -74,13 +75,10 @@ void swap(int *x,int *y){
 }
 
 void bit_reverse(double *real,double *image,int *bits,int *nn){
-	int i,i1,j,k,i2;
+	int i,j,k,i2;
 	double tx,ty;
-	//int x[8]={1,2,3,4,5,6,7,8};
-	//int y[8]={8,7,6,5,4,3,2,1};
-	//int m=3;
-
-  	*nn = 1;
+	
+	*nn=1;
    	for (i=0;i<*bits;i++)
       		(*nn) *= 2;
 
@@ -97,7 +95,7 @@ void bit_reverse(double *real,double *image,int *bits,int *nn){
         k >>= 1;
         }
      	j += k;
-     	cout<<j<<endl;
+     	//cout<<j<<endl;
         }
 
 }
@@ -123,14 +121,17 @@ bool zero_padding(int length,int *bits,int *value){
 
 }
 
+
 void fft(int dir,int *bits,int *nn,double *real,double *image){
 	int l1,l2=1,i1;
-	double u1=1,u2=0,cof1=-1,cof2=0,t1,t2,value;
+	double u1,u2,cof1=-1,cof2=0,t1,t2,value;
 	for(int i=0;i<*bits;i++){
+		u1=1;
+		u2=0;
 		l1=l2;
-		l2/=2;
+		l2<<=1;
 		for(int i=0;i<l1;i++){
-			for(int j=i;j<*nn;j+=12){
+			for(int j=i;j<*nn;j+=l2){
 				i1=j+l1;
 				t1=u1*real[i1]-u2*image[i1];
 				t2=u1*image[i1]+u2*real[i1];
@@ -143,17 +144,17 @@ void fft(int dir,int *bits,int *nn,double *real,double *image){
 			u2=u1*cof2+u2*cof1;
 			u1=value;
 		}
-		cof2=sqrt((1-cof1)/2);
+		cof2=sqrt((1.0-cof1)/2.0);
 		if(dir==1)
 			cof2*=-1;
-		cof1=sqrt((1+cof1)/2);
+		cof1=sqrt((1.0+cof1)/2.0);
 
 
 	}
 	if(dir==1){
 		for(int i=0;i<*nn;i++){
-			real[i]/=(*nn);
-			image[i]/=(*nn);
+			real[i]/=(double)(*nn);
+			image[i]/=(double)(*nn);
 		}
 	}
 }
@@ -165,12 +166,17 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	int cols,rows;
 	int bits,value;
 	int nn;
+	double scale;
 	nn=1;
 	cols=matin.cols;
 	rows=matin.rows;
 	//double realPart[100000],imagePart[100000];
 	double *realPart=(double *)malloc(cols*sizeof(double));
 	double *imagePart=(double *)malloc(cols*sizeof(double));
+	
+	for(int i=0;i<cols;i++)
+		for(int j=0;j<rows;j++)
+			matin.at<Vec2d>(j,i)[0]=matin.at<Vec2d>(j,i)[0]*pow(-1,i+j);
 	if(!zero_padding(cols,&bits,&value)){
 		cout<<"image length is not power of two"<<endl;
 		return 0;
@@ -201,8 +207,8 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	
 	for(int i=0;i<cols;i++){
 		for(int j=0;j<rows;j++){
-			realPart[j]=matin.at<Vec2d>(j,i)[0];
-			imagePart[j]=matin.at<Vec2d>(j,i)[1];
+			realPart[j]=matout.at<Vec2d>(j,i)[0];
+			imagePart[j]=matout.at<Vec2d>(j,i)[1];
 		}
 		
 		bit_reverse(realPart,imagePart,&bits,&nn);
@@ -215,6 +221,15 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	}
 	free(realPart);
 	free(imagePart);
+	for(int i=0;i<cols;i++)
+		for(int j=0;j<rows;j++){
+		//	if(matout.at<Vec2d>(j,i)[0])
+		//		cout<<matout.at<Vec2d>(j,i)[1]<<"----"<<i<<"  "<<j<<endl;
+			matFFT.at<Vec2d>(j,i)=sqrt(pow(matout.at<Vec2d>(j,i)[0],2)+pow(matout.at<Vec2d>(j,i)[1],2));
+	//		matFFT.at<uchar>(j,i)=matout.at<Vec2d>(j,i)[1];
+	}
+	imshow("FFT result",matFFT);
+	waitKey(0);
 		
 	
 }
@@ -263,16 +278,18 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 
 int main(){
 	init("figure1.tif");
-	fft_2d(matDst,matResult,1);
-	for(int i=0;i<matSrc.cols;i++)
+	fft_2d(matDst,matResult,0);
+	for(int i=0;i<matSrc.cols;i++){
 		for(int j=0;j<matSrc.rows;j++){
-			cout<<matResult.at<Vec2d>(j,i)[0]<<"\t";
+		//	cout<<matResult.at<Vec2d>(j,i)[0]<<"\t"<<i<<"  "<<j<<endl;
 		}
-	//fourier_trans();
-/*			for(int i=0;i<matSrc.cols;i++)
+	//	cout<<endl;
+	}
+//	fourier_trans();
+			for(int i=0;i<matSrc.cols;i++)
 				for(int j=0;j<matSrc.rows;j++){
-					//matDst.at<Vec2d>(j,i)[0]=0;
-				}*/
+					matDst.at<Vec2d>(j,i)[1]=0;
+				}
 //	fourier_trans();
 //	fast_fourier();
 //	bit_reverse();
