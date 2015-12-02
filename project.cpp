@@ -170,18 +170,18 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	nn=1;
 	cols=matin.cols;
 	rows=matin.rows;
-	//double realPart[100000],imagePart[100000];
 	double *realPart=(double *)malloc(cols*sizeof(double));
 	double *imagePart=(double *)malloc(cols*sizeof(double));
 	
 	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++)
 			matin.at<Vec2d>(j,i)[0]=matin.at<Vec2d>(j,i)[0]*pow(-1,i+j);
+
 	if(!zero_padding(cols,&bits,&value)){
 		cout<<"image length is not power of two"<<endl;
 		return 0;
 	}
-	
+	/*
 	for(int i=0;i<rows;i++){
 		for(int j=0;j<cols;j++){
 			realPart[j]=matin.at<Vec2d>(i,j)[0];
@@ -221,10 +221,51 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	}
 	free(realPart);
 	free(imagePart);
+
+*/	
+	if(!zero_padding(rows,&bits,&value)){
+		cout<<"image length is not power of two"<<endl;
+		return 0;
+	}
+	
+	for(int i=0;i<cols;i++){
+		for(int j=0;j<rows;j++){
+			realPart[j]=matin.at<Vec2d>(j,i)[0];
+			imagePart[j]=matin.at<Vec2d>(j,i)[1];
+		}
+		
+		bit_reverse(realPart,imagePart,&bits,&nn);
+		fft(1,&bits,&nn,realPart,imagePart);
+		for(int k=0;k<rows;k++){
+			matout.at<Vec2d>(k,i)[0]=realPart[k];
+			matout.at<Vec2d>(k,i)[1]=imagePart[k];
+			
+		}
+	}
+	free(realPart);
+	free(imagePart);
+	realPart=(double *)malloc(rows*sizeof(double));
+	imagePart=(double *)malloc(rows*sizeof(double));
+	for(int i=0;i<rows;i++){
+		for(int j=0;j<cols;j++){
+			realPart[j]=matout.at<Vec2d>(i,j)[0];
+			imagePart[j]=matout.at<Vec2d>(i,j)[1];
+		}
+		
+		bit_reverse(realPart,imagePart,&bits,&nn);
+		fft(1,&bits,&nn,realPart,imagePart);
+		for(int k=0;k<cols;k++){
+			matout.at<Vec2d>(i,k)[0]=realPart[k];
+			matout.at<Vec2d>(i,k)[1]=imagePart[k];
+			
+		}
+	}
+	free(realPart);
+	free(imagePart);
+
+
 	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++){
-		//	if(matout.at<Vec2d>(j,i)[0])
-		//		cout<<matout.at<Vec2d>(j,i)[1]<<"----"<<i<<"  "<<j<<endl;
 			matFFT.at<Vec2d>(j,i)=sqrt(pow(matout.at<Vec2d>(j,i)[0],2)+pow(matout.at<Vec2d>(j,i)[1],2));
 	//		matFFT.at<uchar>(j,i)=matout.at<Vec2d>(j,i)[1];
 	}
@@ -278,7 +319,7 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 
 int main(){
 	init("figure1.tif");
-	fft_2d(matDst,matResult,0);
+	fft_2d(matDst,matResult,1);
 	for(int i=0;i<matSrc.cols;i++){
 		for(int j=0;j<matSrc.rows;j++){
 		//	cout<<matResult.at<Vec2d>(j,i)[0]<<"\t"<<i<<"  "<<j<<endl;
