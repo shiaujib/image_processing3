@@ -158,7 +158,12 @@ void fft(int dir,int *bits,int *nn,double *real,double *image){
 		}
 	}
 }
-		
+
+/*void fft_2(double *real,double *image,int *nn){
+	for(int i=0;i<*nn;i++){
+		for(int k=0;k<0.5*(*nn);k+=2){
+			real[k]*
+*/		
 	
 	
 
@@ -222,7 +227,7 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	free(realPart);
 	free(imagePart);
 
-*/	
+*/
 	if(!zero_padding(rows,&bits,&value)){
 		cout<<"image length is not power of two"<<endl;
 		return 0;
@@ -233,7 +238,7 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 			realPart[j]=matin.at<Vec2d>(j,i)[0];
 			imagePart[j]=matin.at<Vec2d>(j,i)[1];
 		}
-		
+		nn=1;
 		bit_reverse(realPart,imagePart,&bits,&nn);
 		fft(1,&bits,&nn,realPart,imagePart);
 		for(int k=0;k<rows;k++){
@@ -266,10 +271,13 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 
 	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++){
-			matFFT.at<Vec2d>(j,i)=sqrt(pow(matout.at<Vec2d>(j,i)[0],2)+pow(matout.at<Vec2d>(j,i)[1],2));
-	//		matFFT.at<uchar>(j,i)=matout.at<Vec2d>(j,i)[1];
+			matFFT.at<Vec2d>(j,i*0.5)=log(1.1+sqrt(pow(matout.at<Vec2d>(j,i)[0],2)+pow(matout.at<Vec2d>(j,i)[1],2)));
+			//cout<<matFFT.at<Vec3b>(j,i)<<endl;;	
+			//		matFFT.at<uchar>(j,i)=matout.at<Vec2d>(j,i)[1];
+		//	matFFT.at<Vec2d>(j,i)=log(matFFT.at<Vec2d>(j,i));
 	}
 	imshow("FFT result",matFFT);
+//	imwrite("fft_result.tif",matFFT);
 	waitKey(0);
 		
 	
