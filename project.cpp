@@ -11,7 +11,7 @@ using namespace cv;
 //typedef float real;
 //typedef struct{real Re; real Im;} complex;
 
-Mat matSrc,matSrc2,matDst,matZero,matResult,matFFT,matIFFT,matH,matHP;
+Mat matSrc,matSrc2,matDst,matZero,matResult,matFFT,matIFFT,matH,matHP,matIHP,matTmp,matRifft,matRifft2,matHFEF;
 
 bool zero_padding(int length,int *bits,int *value){
 	if(length<1){
@@ -53,13 +53,18 @@ void init(String str){
 	matFFT=Mat(matSrc2.size(),CV_64FC1);
 	matIFFT=Mat(matSrc2.size(),CV_64FC1);
 	matH=Mat(matSrc2.size(),CV_64FC1);
-	matHP=Mat(matSrc2.size(),CV_64FC1);
+	matHP=Mat(matSrc2.size(),CV_64FC2);
+	matIHP=Mat(matSrc2.size(),CV_64FC1);
+	matTmp=Mat(matSrc2.size(),CV_64FC1);
+	matRifft=Mat(matSrc.size(),CV_64FC1);
+	matRifft2=Mat(matSrc.size(),CV_64FC1);
+	matHFEF=Mat(matSrc.size(),CV_64FC1);
 	for(int i=0;i<matSrc.cols;i++)
 		for(int j=0;j<matSrc.rows;j++){
 			matSrc2.at<uchar>(j,i)=matSrc.at<uchar>(j,i);
 //			cout<<matDst.at<Vec2d>(j,i)[0]<<"----\t";
 		}
-	imshow("new src",matSrc2);
+	//imshow("new src",matSrc2);
 	waitKey(0);
 	for(int i=0;i<matSrc2.cols;i++)
 		for(int j=0;j<matSrc2.rows;j++){
@@ -192,6 +197,23 @@ void center_trans(Mat matin){
 			matin.at<Vec2d>(j,i)[0]=matin.at<Vec2d>(j,i)[0]*pow(-1,i+j);
 }
 	
+void magnitude(Mat matin,Mat matout){
+	int cols,rows;
+	cols=matin.cols;
+	rows=matin.rows;
+	for(int i=0;i<cols;i++){
+		for(int j=0;j<rows;j++){
+			matout.at<Vec2d>(j,i*0.5)=sqrt(pow(matin.at<Vec2d>(j,i)[0],2)+pow(matin.at<Vec2d>(j,i)[1],2));
+		}
+	}
+
+	//imshow("magnitude",matout);
+	//waitKey(0);
+}
+
+
+
+
 
 int  fft_2d(Mat matin,Mat matout,int dir){
 	int cols,rows;
@@ -201,8 +223,6 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	nn=1;
 	cols=matin.cols;
 	rows=matin.rows;
-	cout<<"cols"<<cols<<endl;
-	cout<<"rows"<<rows<<endl;
 	double *realPart=(double *)malloc(cols*sizeof(double));
 	double *imagePart=(double *)malloc(cols*sizeof(double));
 	/*for(int i=0;i<cols;i++)
@@ -264,7 +284,7 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 
 //	cout<<"444444444444444"<<endl;
 
-	for(int i=0;i<cols;i++)
+/*	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++){
 			matFFT.at<Vec2d>(j,i*0.5)=sqrt(pow(matout.at<Vec2d>(j,i)[0],2)+pow(matout.at<Vec2d>(j,i)[1],2));
 			
@@ -273,7 +293,8 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 			//cout<<matFFT.at<Vec3b>(j,i)<<endl;;	
 			//		matFFT.at<uchar>(j,i)=matout.at<Vec2d>(j,i)[1];
 		//	matFFT.at<Vec2d>(j,i)=log(matFFT.at<Vec2d>(j,i));
-	}
+	}*/
+	magnitude(matout,matFFT);
 	imshow("FFT result",matFFT);
 //	imwrite("fft_result.tif",matFFT);
 	waitKey(0);
@@ -283,7 +304,7 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 	
 
 
-int  ifft_2d(Mat matin,Mat matout,int dir){
+int  ifft_2d(Mat matin,Mat matresult,int dir,String str,int flag){
 	int cols,rows;
 	int bits,value;
 	int nn;
@@ -294,6 +315,8 @@ int  ifft_2d(Mat matin,Mat matout,int dir){
 	rows=matin.rows;
 	double *realPart=(double *)malloc(cols*sizeof(double));
 	double *imagePart=(double *)malloc(cols*sizeof(double));
+	Mat matout;
+	matout=Mat(matSrc2.size(),CV_64FC2);
 /*	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++)
 			matin.at<Vec2d>(j,i)[0]=matin.at<Vec2d>(j,i)[0]*pow(-1,i+j);
@@ -314,10 +337,10 @@ int  ifft_2d(Mat matin,Mat matout,int dir){
 		}
 	}
 	
-	cout<<"6666666666"<<endl;
+	//cout<<"6666666666"<<endl;
 	free(realPart);
 	free(imagePart);
-	cout<<"6666666666"<<endl;
+	//cout<<"6666666666"<<endl;
 	realPart=(double *)malloc(rows*sizeof(double));
 	imagePart=(double *)malloc(rows*sizeof(double));
 //	zero_padding(rows,&bits,&nn);
@@ -348,7 +371,7 @@ int  ifft_2d(Mat matin,Mat matout,int dir){
 			if(result<0)
 				result=0;*/
 			
-			matIFFT.at<double>(j,i)=result;
+			matresult.at<double>(j,i)=result;
 		/*	if(result>max)
 				max=result;
 			if(result<min);
@@ -358,14 +381,18 @@ int  ifft_2d(Mat matin,Mat matout,int dir){
 			
 			
 	}
-	cout<<max<<endl;
-	cout<<min<<endl;
+	
 	//center_trans(matIFFT);
-/*	for(int i=0;i<cols;i++)
-		for(int j=0;j<rows;j++)
-			matIFFT.at<Vec2d>(j,i)=matIFFT.at<Vec2d>(j,i)*pow(-1,i+j);
-*/	
-	imshow("IFFT result",matIFFT);
+	for(int i=0;i<matSrc.cols;i++)
+		for(int j=0;j<matSrc.rows;j++){
+			matRifft.at<Vec2d>(j,i)=matresult.at<Vec2d>(j,i+0.5*(cols-matSrc.cols));
+			if(flag==1)
+				matRifft2.at<Vec2d>(j,i)=matresult.at<Vec2d>(j,i+0.5*(cols-matSrc.cols));
+	}
+	
+//	imshow(str,matresult);
+//	waitKey(0);
+	imshow(str,matRifft);
 //	imwrite("fft_result.tif",matFFT);
 	waitKey(0);
 		
@@ -378,22 +405,55 @@ void highPassFilter(Mat matin,Mat matout,double D0){
 	int cols,rows;
 	cols=matin.cols;
 	rows=matin.rows;
-	double D;
+	double D,value;
 	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++){
 			D=sqrt(pow(i,2)+pow(j,2));
 			/*if(D>D0)
-				matH.at<Vec2d>(j,i)=1;
+				value=1;
 			else if(D<=D0)
-				matH.at<Vec2d>(j,i)=0;*/
-			matH.at<Vec2d>(j,i)=1-exp((-pow(D,2)/(2*pow(D0,2))));
-			matout.at<Vec2d>(j,i)=(double)matH.at<Vec2d>(j,i)*matFFT.at<Vec2d>(j,i);
+				value=0;*/
+			value=1-exp((-pow(D,2)/(2*pow(D0,2))));
+			//value=1-exp((-pow(D,2)/(2*pow(D0,2))));
+			matout.at<Vec2d>(j,i)[0]=value*matin.at<Vec2d>(j,i)[0];
+			matout.at<Vec2d>(j,i)[1]=value*matin.at<Vec2d>(j,i)[1];
 		}	
-	imshow("Gaussian high pass",matout);
+	magnitude(matout,matTmp);
+	imshow("test",matTmp);	
+	//imshow("Gaussian high pass",matout);
 	waitKey(0);
 }
 
 
+void HFEF(Mat matin ,Mat matout,int k){
+	int cols,rows;
+	cols=matin.cols;
+	rows=matin.rows;
+	double D,value;
+	Mat gmask,tmp;
+	double max,min;
+	gmask=Mat(matSrc.size(),CV_64FC1);
+	tmp=Mat(matSrc.size(),CV_8UC1);
+	for(int i=0;i<cols;i++)
+		for(int j=0;j<rows;j++){
+			gmask.at<double>(j,i)=matRifft2.at<double>(j,i)-matin.at<double>(j,i);
+			matout.at<double>(j,i)=matRifft2.at<double>(j,i)+k*gmask.at<double>(j,i);
+			if(matout.at<double>(j,i)>max)
+				max=matout.at<double>(j,i);
+			if(matout.at<double>(j,i)<min)
+				min=matout.at<double>(j,i);
+		}
+	
+	for(int i=0;i<cols;i++)                         //normalize
+		for(int j=0;j<rows;j++)
+			tmp.at<uchar>(j,i)=(matout.at<double>(j,i)-min)*255/(max-min);
+			
+	imshow("HFEF RESULT",tmp);
+	waitKey(0);
+	equalizeHist( tmp,tmp );
+	imshow("histogram equalize",tmp);
+	waitKey(0);
+}
 
 
 
@@ -442,23 +502,16 @@ void highPassFilter(Mat matin,Mat matout,double D0){
 
 int main(){
 //	init("Fig0516(a)(applo17_boulder_noisy).tif");
-	init("figure1.tif");
+//	init("figure1.tif");
 //	init("test.tif");
-	//init("Fig0516(c)(BW_banreject_order4).tif");
+//	init("Fig0516(c)(BW_banreject_order4).tif");
+	init("456.tif");
 	fft_2d(matDst,matResult,1);
-	ifft_2d(matResult,matResult,-1);
-	highPassFilter(matFFT,matHP,60);
-	for(int i=0;i<matSrc.cols;i++){
-		for(int j=0;j<matSrc.rows;j++){
-		//	cout<<matResult.at<Vec2d>(j,i)[0]<<"\t"<<i<<"  "<<j<<endl;
-		}
-	//	cout<<endl;
-	}
+	ifft_2d(matResult,matIFFT,-1,"ifft source image",1);
+	highPassFilter(matResult,matHP,900);
+	ifft_2d(matHP,matIHP,-1,"ifft hp image",0);
+	HFEF(matRifft,matHFEF,1);
 //	fourier_trans();
-			for(int i=0;i<matSrc.cols;i++)
-				for(int j=0;j<matSrc.rows;j++){
-					matDst.at<Vec2d>(j,i)[1]=0;
-				}
 //	fourier_trans();
 //	fast_fourier();
 //	bit_reverse();
