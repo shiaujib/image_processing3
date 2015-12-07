@@ -11,7 +11,7 @@ using namespace cv;
 //typedef float real;
 //typedef struct{real Re; real Im;} complex;
 
-Mat matSrc,matSrc2,matDst,matZero,matResult,matFFT,matIFFT;
+Mat matSrc,matSrc2,matDst,matZero,matResult,matFFT,matIFFT,matH,matHP;
 
 bool zero_padding(int length,int *bits,int *value){
 	if(length<1){
@@ -52,6 +52,8 @@ void init(String str){
 	matDst=Mat(matSrc2.size(),CV_64FC2);
 	matFFT=Mat(matSrc2.size(),CV_64FC1);
 	matIFFT=Mat(matSrc2.size(),CV_64FC1);
+	matH=Mat(matSrc2.size(),CV_64FC1);
+	matHP=Mat(matSrc2.size(),CV_64FC1);
 	for(int i=0;i<matSrc.cols;i++)
 		for(int j=0;j<matSrc.rows;j++){
 			matSrc2.at<uchar>(j,i)=matSrc.at<uchar>(j,i);
@@ -372,6 +374,25 @@ int  ifft_2d(Mat matin,Mat matout,int dir){
 	
 
 
+void highPassFilter(Mat matin,Mat matout,double D0){
+	int cols,rows;
+	cols=matin.cols;
+	rows=matin.rows;
+	double D;
+	for(int i=0;i<cols;i++)
+		for(int j=0;j<rows;j++){
+			D=sqrt(pow(i,2)+pow(j,2));
+			/*if(D>D0)
+				matH.at<Vec2d>(j,i)=1;
+			else if(D<=D0)
+				matH.at<Vec2d>(j,i)=0;*/
+			matH.at<Vec2d>(j,i)=1-exp((-pow(D,2)/(2*pow(D0,2))));
+			matout.at<Vec2d>(j,i)=(double)matH.at<Vec2d>(j,i)*matFFT.at<Vec2d>(j,i);
+		}	
+	imshow("Gaussian high pass",matout);
+	waitKey(0);
+}
+
 
 
 
@@ -426,6 +447,7 @@ int main(){
 	//init("Fig0516(c)(BW_banreject_order4).tif");
 	fft_2d(matDst,matResult,1);
 	ifft_2d(matResult,matResult,-1);
+	highPassFilter(matFFT,matHP,60);
 	for(int i=0;i<matSrc.cols;i++){
 		for(int j=0;j<matSrc.rows;j++){
 		//	cout<<matResult.at<Vec2d>(j,i)[0]<<"\t"<<i<<"  "<<j<<endl;
