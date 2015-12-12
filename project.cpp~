@@ -40,7 +40,6 @@ void init(String str){
 	int bits,value;
 	int newcols,newrows;
 	matSrc=imread(str,0);
-	Mat matSrcc=imread(str,0);
 	//matResult=Mat(matSrc.size(),CV_64FC2);
 	//matFFT=Mat(matSrc.size(),CV_64FC1);
 	//matIFFT=Mat(matSrc.size(),CV_64FC1);
@@ -150,24 +149,24 @@ void bit_reverse(double *real,double *image,int *bits,int *nn){
 
 
 
-void fft(int dir,int *bits,int *iter,double *real,double *image){
+void fft(int dir,int *bits,int *nn,double *real,double *image){
 	
 	int l1,l2=1,i1;
-	double u1,u2,cof1=-1.0,cof2=0.0,value1,value2,value;
+	double u1,u2,cof1=-1.0,cof2=0.0,t1,t2,value;
 	for(int i=0;i<*bits;i++){
 		u1=1;
 		u2=0;
 		l1=l2;
 		l2<<=1;
 		for(int i=0;i<l1;i++){
-			for(int j=i;j<*iter;j+=l2){
+			for(int j=i;j<*nn;j+=l2){
 				i1=j+l1;
-				value1=u1*real[i1]-u2*image[i1];
-				value2=u1*image[i1]+u2*real[i1];
-				real[i1]=real[j]-value1;
-				image[i1]=image[j]-value2;
-				real[j]+=value1;
-				image[j]+=value2;
+				t1=u1*real[i1]-u2*image[i1];
+				t2=u1*image[i1]+u2*real[i1];
+				real[i1]=real[j]-t1;
+				image[i1]=image[j]-t2;
+				real[j]+=t1;
+				image[j]+=t2;
 			}
 			value=u1*cof1-u2*cof2;
 			u2=u1*cof2+u2*cof1;
@@ -181,9 +180,9 @@ void fft(int dir,int *bits,int *iter,double *real,double *image){
 
 	}
 	if(dir==1){
-		for(int i=0;i<*iter;i++){
-			real[i]/=(double)(*iter);
-			image[i]/=(double)(*iter);
+		for(int i=0;i<*nn;i++){
+			real[i]/=(double)(*nn);
+			image[i]/=(double)(*nn);
 		}
 	}
 }
@@ -204,17 +203,9 @@ void magnitude(Mat matin,Mat matout){
 	int cols,rows;
 	cols=matin.cols;
 	rows=matin.rows;
-	/*for(int i=0;i<cols;i++){
-		for(int j=0;j<rows;j++){
-			matout.at<Vec2d>(j,i*0.5)=log(1.15+sqrt(pow(matin.at<Vec2d>(j,i)[0],2)+pow(matin.at<Vec2d>(j,i)[1],2)));
-			//matout.at<Vec2d>(j,i*0.5)=(double)log(1.2+matout.at<double>(j,i));
-		}
-	}*/
-	
 	for(int i=0;i<cols;i++){
 		for(int j=0;j<rows;j++){
 			matout.at<Vec2d>(j,i*0.5)=sqrt(pow(matin.at<Vec2d>(j,i)[0],2)+pow(matin.at<Vec2d>(j,i)[1],2));
-			//matout.at<Vec2d>(j,i*0.5)=(double)log(1.2+matout.at<double>(j,i));
 		}
 	}
 
@@ -292,6 +283,8 @@ int  fft_2d(Mat matin,Mat matout,int dir){
 //	cout<<"444444444444444"<<endl;
 	free(realPart);
 	free(imagePart);
+
+//	cout<<"444444444444444"<<endl;
 
 /*	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++){
@@ -412,20 +405,19 @@ int  ifft_2d(Mat matin,Mat matresult,int dir,String str,int flag,int Fscale){
 			tmp.at<uchar>(j,i)=(matRifft.at<double>(j,i)-min)*255/(max-min);
 
 
-	imshow(str,tmp);
+	imshow("scale",tmp);
 	waitKey(0);
 
 	}
-	else{
-		imshow(str,matRifft);
-		waitKey(0);
-	}	
+	imshow(str,matRifft);
+	waitKey(0);
+		
 	
 }
 	
 
 
-void highPassFilter(Mat matin,Mat matout,double D0,bool flag){
+void highPassFilter(Mat matin,Mat matout,double D0){
 	int cols,rows;
 	cols=matin.cols;
 	rows=matin.rows;
@@ -433,15 +425,12 @@ void highPassFilter(Mat matin,Mat matout,double D0,bool flag){
 	Mat tmp=Mat(matSrc.size(),CV_8UC1);
 	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++){
-			D=sqrt(pow(cols/2-i,2)+pow(rows/2-j,2));
+			D=sqrt(pow(i,2)+pow(j,2));
 			/*if(D>D0)
 				value=1;
 			else if(D<=D0)
 				value=0;*/
-			if(flag==1)
-				value=1-exp((-pow(D,2)/(2*pow(D0,2))));
-			else
-				value=exp((-pow(D,2)/(2*pow(D0,2))));
+			value=1-exp((-pow(D,2)/(2*pow(D0,2))));
 			//value=1-exp((-pow(D,2)/(2*pow(D0,2))));
 			matout.at<Vec2d>(j,i)[0]=value*matin.at<Vec2d>(j,i)[0];
 			matout.at<Vec2d>(j,i)[1]=value*matin.at<Vec2d>(j,i)[1];
@@ -468,12 +457,10 @@ void HFEF(Mat matin ,Mat matout,int k){
 	cols=matin.cols;
 	rows=matin.rows;
 	double D,value;
-	Mat gmask,tmp;
+	Mat gmask,tmp2;
 	double max,min;
 	gmask=Mat(matSrc.size(),CV_64FC1);
-	tmp=Mat(matSrc.size(),CV_8UC1);
-	imshow("111",matRifft2);
-	waitKey(0);
+	tmp2=Mat(matSrc.size(),CV_8UC1);
 	for(int i=0;i<cols;i++)
 		for(int j=0;j<rows;j++){
 			gmask.at<double>(j,i)=matRifft2.at<double>(j,i)-matin.at<double>(j,i);
@@ -486,15 +473,14 @@ void HFEF(Mat matin ,Mat matout,int k){
 	
 	for(int i=0;i<cols;i++)                         //normalize
 		for(int j=0;j<rows;j++)
-			tmp.at<uchar>(j,i)=(matout.at<double>(j,i)-min)*255/(max-min);
+			tmp2.at<uchar>(j,i)=(matout.at<double>(j,i)-min)*255/(max-min);
 			
-	imshow("HFEF RESULT",tmp);
+	imshow("HFEF RESULT",tmp2);
 	waitKey(0);
-	equalizeHist( tmp,tmp );
-	imshow("histogram equalize",tmp);
+	equalizeHist( tmp2,tmp2 );
+	imshow("histogram equalize",tmp2);
 	waitKey(0);
 }
-
 
 
 void BLPF(Mat matin,Mat matout,double a,int D0,int n){
@@ -512,33 +498,9 @@ void BLPF(Mat matin,Mat matout,double a,int D0,int n){
 	magnitude(matout,matTmp);
 	imshow("BLPF ",matTmp);
 	waitKey(0);
-
-
-}
-		
-
-
-
-void BBRF(Mat matin,Mat matout,int D0,int n,int W){
-	double value;
-	int cols,rows;
-	double D;
-	cols=matin.cols;
-	rows=matin.rows;
-	for(int i=0;i<cols;i++)
-		for(int j=0;j<rows;j++){
-			D=sqrt(pow(cols-i,2)+pow(rows-j,2));
-			value=1+pow((D*W)/(pow(D,2)-pow(D0,2)),2*n);	
-			value=1/value;
-			value=1-value;
-			matout.at<Vec2d>(j,i)[0]=value*matin.at<Vec2d>(j,i)[0];
-			matout.at<Vec2d>(j,i)[1]=value*matin.at<Vec2d>(j,i)[1];
-			}
-	magnitude(matout,matTmp);
-	imshow("BBRF ",matTmp);
-	waitKey(0);
 }
 			
+		
 
 
 /*void zero_padding(int m,int n){
@@ -582,21 +544,17 @@ void BBRF(Mat matin,Mat matout,int D0,int n,int W){
 
 
 int main(){
-	init("Fig0516(a)(applo17_boulder_noisy).tif");
+//	init("Fig0516(a)(applo17_boulder_noisy).tif");
 //	init("figure1.tif");
 //	init("test.tif");
 //	init("Fig0516(c)(BW_banreject_order4).tif");
-//	init("456.tif");
-	//init("tt.bmp");
+	init("456.tif");
 	fft_2d(matDst,matResult,1);
 	ifft_2d(matResult,matIFFT,-1,"ifft source image",1,0);
-/*	highPassFilter(matResult,matHP,60,1);
-	ifft_2d(matHP,matIHP,-1,"ifft hp image",0,1);
-	highPassFilter(matResult,matHP,100,0);
-	ifft_2d(matHP,matIHP,-1,"ifft lp image",0,1);
-	HFEF(matRifft,matHFEF,1);*/
-	BBRF(matResult,matBLPF,100,2,400);
-	//BBRF(matResult,matBLPF,100,1,600);
+	highPassFilter(matResult,matHP,900);
+	ifft_2d(matHP,matIHP,-1,"ifft hp image",0,0);
+	HFEF(matRifft,matHFEF,1);
+	BLPF(matResult,matBLPF,1,30,0);
 	ifft_2d(matBLPF,matIBLPF,-1,"BLPF",0,0);
 //	fourier_trans();
 //	fourier_trans();
